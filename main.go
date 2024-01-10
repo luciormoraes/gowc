@@ -1,18 +1,19 @@
 package main
 
 import (
-	"bufio"
 	"flag"
 	"fmt"
 	"os"
 	"strings"
+	"unicode/utf8"
 )
 
 func main() {
-	var showLines, showBytes, showWords bool
+	var showLines, showBytes, showWords, showMultiBytes bool
 	flag.BoolVar(&showBytes, "c", false, "print the byte counts")
 	flag.BoolVar(&showLines, "l", false, "print the newline counts")
 	flag.BoolVar(&showWords, "w", false, "print the word counts")
+	flag.BoolVar(&showMultiBytes, "m", false, "print the character counts")
 	flag.Parse()
 
 	// Get file name from command line
@@ -25,48 +26,54 @@ func main() {
 	}
 
 	// Open file
-	file, err := os.Open(fileName)
+	file, err := os.ReadFile(fileName)
 	if err != nil {
 		fmt.Println("error opening file:", err)
 		os.Exit(1)
 	}
-	defer file.Close() // Close file when done
-
-	// Scan file
-	scanner := bufio.NewScanner(file)
-	lines, words, characters := 0, 0, 0
-
-	for scanner.Scan() {
-		lines++
-
-		line := scanner.Text()
-		characters += len(line) + 1 // Include the newline character
-
-		// Count words using strings.Fields for accurate word count
-		words += len(strings.Fields(line))
-	}
-
-	if err := scanner.Err(); err != nil {
-		fmt.Println("Error reading file:", err)
-		os.Exit(1)
-	}
-
-	// fmt.Printf("%d %d %d %s\n", lines, words, characters, fileName)
 
 	// Display counts by default if no flags are provided
-	if !showLines && !showBytes && !showWords {
-		fmt.Printf("%d %d %d %s\n", lines, words, characters, fileName)
+	if !showLines && !showBytes && !showWords && !showMultiBytes {
+		lines, words, bytes := countLines(file), countWords(file), len(file)
+		fmt.Printf("%d %d %d %s\n", lines, words, bytes, fileName)
 	} else {
 		if showLines {
-			fmt.Printf("%d %s\n", lines, fileName)
+			fmt.Printf("%d %s\n", countLines(file), fileName)
 		}
 
 		if showBytes {
-			fmt.Printf("%d %s\n", characters, fileName)
+			fmt.Printf("%d %s\n", len(file), fileName)
 		}
 
 		if showWords {
-			fmt.Printf("%d %s\n", words, fileName)
+			fmt.Printf("%d %s\n", countWords(file), fileName)
+		}
+
+		if showMultiBytes {
+			fmt.Printf("%d %s\n", countMultiBytes(file), fileName)
 		}
 	}
+
+	// defer file.Close() // Close file when done
+}
+
+func countLines(content []byte) int {
+	count := 0
+	for _, b := range content {
+		if b == '\n' {
+			count++
+		}
+	}
+	return count
+}
+
+func countWords(content []byte) int {
+	words := 0
+	fields := strings.Fields(string(content))
+	words = len(fields)
+	return words
+}
+
+func countMultiBytes(content []byte) int {
+	return utf8.RuneCount(content)
 }
