@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"flag"
 	"fmt"
 	"os"
@@ -15,6 +16,13 @@ func main() {
 	flag.BoolVar(&showWords, "w", false, "print the word counts")
 	flag.BoolVar(&showMultiBytes, "m", false, "print the character counts")
 	flag.Parse()
+
+	// Check if data is being piped in
+	stat, _ := os.Stdin.Stat()
+	if (stat.Mode() & os.ModeCharDevice) == 0 {
+		processPipedInput(showLines, showBytes, showWords)
+		return
+	}
 
 	// Get file name from command line
 	fileName := flag.CommandLine.Arg(0)
@@ -76,4 +84,39 @@ func countWords(content []byte) int {
 
 func countMultiBytes(content []byte) int {
 	return utf8.RuneCount(content)
+}
+
+func processPipedInput(showLines, showBytes, showWords bool) {
+	fmt.Println("Reading from stdin...")
+	scanner := bufio.NewScanner(os.Stdin)
+	lines, bytes, words := 0, 0, 0
+
+	for scanner.Scan() {
+		lines++
+
+		line := scanner.Text()
+		bytes += len(line) + 1 // Include the newline character
+		words += len(strings.Fields(line))
+	}
+
+	if err := scanner.Err(); err != nil {
+		fmt.Println("Error reading input:", err)
+		os.Exit(1)
+	}
+
+	if !showLines && !showBytes && !showWords {
+		fmt.Printf("%d %d %d\n", lines, words, bytes)
+	} else {
+		if showLines {
+			fmt.Printf("%d\n", lines)
+		}
+
+		if showBytes {
+			fmt.Printf("%d\n", bytes)
+		}
+
+		if showWords {
+			fmt.Printf("%d\n", words)
+		}
+	}
 }
