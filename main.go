@@ -9,8 +9,10 @@ import (
 )
 
 func main() {
-	var showLines bool
-	flag.BoolVar(&showLines, "l", false, "Show lines")
+	var showLines, showBytes, showWords bool
+	flag.BoolVar(&showBytes, "c", false, "print the byte counts")
+	flag.BoolVar(&showLines, "l", false, "print the newline counts")
+	flag.BoolVar(&showWords, "w", false, "print the word counts")
 	flag.Parse()
 
 	// Get file name from command line
@@ -49,9 +51,22 @@ func main() {
 		os.Exit(1)
 	}
 
-	fmt.Printf("%d %d %d %s\n", lines, words, characters, fileName)
+	// fmt.Printf("%d %d %d %s\n", lines, words, characters, fileName)
 
-	if showLines {
-		fmt.Printf("%d %s\n", lines, fileName)
+	// Display counts by default if no flags are provided
+	if !showLines && !showBytes && !showWords {
+		fmt.Printf("%d %d %d %s\n", lines, words, characters, fileName)
+	} else {
+		if showLines {
+			fmt.Printf("%d %s\n", lines, fileName)
+		}
+
+		if showBytes {
+			fmt.Printf("%d %s\n", characters, fileName)
+		}
+
+		if showWords {
+			fmt.Printf("%d %s\n", words, fileName)
+		}
 	}
 }
