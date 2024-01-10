@@ -18,8 +18,7 @@ func main() {
 	flag.Parse()
 
 	// Check if data is being piped in
-	stat, _ := os.Stdin.Stat()
-	if (stat.Mode() & os.ModeCharDevice) == 0 {
+	if hasPipedInput() {
 		processPipedInput(showLines, showBytes, showWords)
 		return
 	}
@@ -87,9 +86,10 @@ func countMultiBytes(content []byte) int {
 }
 
 func processPipedInput(showLines, showBytes, showWords bool) {
-	fmt.Println("Reading from stdin...")
+	// fmt.Println("Reading from stdin...")
 	scanner := bufio.NewScanner(os.Stdin)
 	lines, bytes, words := 0, 0, 0
+	lastLineHasNewline := false // Flag to check if the last line has a newline
 
 	for scanner.Scan() {
 		lines++
@@ -97,11 +97,21 @@ func processPipedInput(showLines, showBytes, showWords bool) {
 		line := scanner.Text()
 		bytes += len(line) + 1 // Include the newline character
 		words += len(strings.Fields(line))
+
+		// Check if the line has a newline character at the end
+		if strings.HasSuffix(line, "\n") {
+			lastLineHasNewline = true
+		}
 	}
 
 	if err := scanner.Err(); err != nil {
-		fmt.Println("Error reading input:", err)
+		fmt.Fprintf(os.Stderr, "Error reading input: %s\n", err)
 		os.Exit(1)
+	}
+
+	// Adjust line count if the last line doesn't end with a newline
+	if !lastLineHasNewline {
+		lines--
 	}
 
 	if !showLines && !showBytes && !showWords {
@@ -119,4 +129,9 @@ func processPipedInput(showLines, showBytes, showWords bool) {
 			fmt.Printf("%d\n", words)
 		}
 	}
+}
+
+func hasPipedInput() bool {
+	stat, _ := os.Stdin.Stat()
+	return (stat.Mode() & os.ModeCharDevice) == 0
 }
